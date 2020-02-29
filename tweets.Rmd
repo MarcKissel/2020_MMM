@@ -1,0 +1,162 @@
+---
+title: "MMM_tweets"
+author: "Marc Kissel"
+date: "2/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r needed libraries}
+library(rtweet)
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+library(wordcloud2)
+```
+
+
+first load the tweets
+
+```{r}
+MMM_2020 <- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+```
+
+
+Basic graphs 
+
+```{r}
+ts_plot(MMM_2020, "2 hours") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of #2019MMM Twitter statuses",
+    subtitle = "till Feb 29",
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet")
+  
+  
+
+ggplot(MMM_2020, aes(created_at))+
+  geom_density(alpha=.75, fill="#4cda76")+ # fill with main SAC logo blue
+  ggtitle("#2020MMM Tweets")+
+  ylab("Density of tweets")+
+  xlab("Time")
+
+```
+
+
+
+anaylze data
+
+```{r}
+MMM_2020 %>% count(screen_name, sort=T)
+MMM_2020 %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
+```
+
+
+wordcloud
+
+```{r}
+MMM_table <-MMM_2020 %>% unnest_tokens(word, text)
+MMM_table <- MMM_table %>% anti_join(stop_words)
+MMM_table <- MMM_table %>% count(word, sort =  T)
+MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https"))
+wordcloud2::wordcloud2(MMM_table_edited, size = .7)
+wordcloud(MMM_table_edited)
+```
+
+
+map data
+(note that most tweets don't have loc data)
+
+```{r}
+MMM_2020 %>% count(country_code)
+rt1 <- lat_lng(MMM_2020)
+```
+
+
+map itself, version 1
+
+```{r}
+par(mar = c(0, 0, 0, 0))
+maps::map("world", lwd = .25)
+with(rt1, points(lng, lat, pch = 20, cex = .75, col = rgb(0, .3, .7, .75)))
+
+```
+
+map, version 2 w/ leaflet 
+
+```{r}
+library(leaflet)
+leaflet() %>% addTiles() %>% 
+  setView(lat = 50.85045, lng = 4.34878, zoom=0) %>%  addMarkers(~lng, ~lat, data = rt1, popup = ~as.character(text), label = ~as.character(screen_name)) 
+```
+
+
+stream data:
+example from https://rtweet.info/articles/stream.html#stream_tweets
+
+
+```{r}
+q <- "2020MMM"
+library(tidygraph)
+
+## Stream time in seconds so for one minute set timeout = 60
+## For larger chunks of time, I recommend multiplying 60 by the number
+## of desired minutes. This method scales up to hours as well
+## (x * 60 = x mins, x * 60 * 60 = x hours)
+
+## Stream for 30 minutes
+streamtime <- 30 * 60 ## Stream for 30 minutes
+streamtime <- 30 * 1 
+filename <- "rtelect.json"
+rt <- stream_tweets("2020MMM", timeout = 90, file_name = filename) # do or 9 seconds
+
+library(rjson)
+result <- fromJSON(file = "rtelect.json")
+```
+
+
+network?
+https://rud.is/books/21-recipes/visualizing-a-graph-of-retweet-relationships.html
+
+
+```{r}
+library(tidygraph)
+library(rtweet)
+library(igraph)
+library(hrbrthemes)
+library(ggraph)
+library(tidyverse)
+
+filter(MMM_2020, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_g
+
+#add labels for nodes that have a degree of 20 or more 
+V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, degree(rt_g), 0)) 
+
+
+ggraph(rt_g, layout = 'linear', circular = FALSE) + 
+  geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold") +
+  coord_fixed() +
+  scale_size_area(trans="sqrt") +
+  labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
+  theme_graph(base_family=font_rc) +
+  theme(legend.position="none")
+
+```
+
+
+
