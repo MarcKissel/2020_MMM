@@ -35,8 +35,8 @@ ts_plot(MMM_2020, "2 hours") +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
     x = NULL, y = NULL,
-    title = "Frequency of #2019MMM Twitter statuses",
-    subtitle = "till Feb 29",
+    title = "Frequency of #2020MMM Twitter statuses",
+    subtitle = Sys.Date(),
     caption = "\nSource: Data collected from Twitter's REST API via rtweet")
   
   
@@ -56,6 +56,23 @@ anaylze data
 ```{r}
 MMM_2020 %>% count(screen_name, sort=T)
 MMM_2020 %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
+
+MMM_2020 %>% arrange(-favorite_count) %>% select(favorite_count)
+
+MMM_2020 %>% group_by(screen_name) %>% count(sort=T)
+
+MMM_2020 %>% group_by(screen_name) %>% filter(n() > 5) %>%  ggplot(aes(x= screen_name)) + geom_bar() + coord_flip()
+
+
+
+a <- MMM_2020 %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
+
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name)) + geom_bar() + coord_flip()
+
+
+
+
+
 ```
 
 
