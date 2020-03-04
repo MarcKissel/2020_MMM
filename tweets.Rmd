@@ -16,21 +16,75 @@ library(tidyverse)
 library(tidytext)
 library(wordcloud)
 library(wordcloud2)
+library(lubridate)
 ```
 
 
 first load the tweets
 
 ```{r}
-MMM_2020 <- search_tweets(
+MMM_2020<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE) 
+
+Sys.time()
+
+
+MMM_2020_March02_6_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+
+MMM_2020_March02_3_30_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+MMM_2020_March03_12_15_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+
+MMM_2020_March04_11_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
 ```
+
+now i loose the first 29 from set1 and
+
+Export data
+
+```{r}
+
+write_as_csv(MMM_2020, "2020-03-01_9AM_tweets")
+write_as_csv(MMM_2020_b_March03_5_50_pm, "2020-03-01_5_50pm_tweets")
+write_as_csv(MMM_2020_March02_6_30_am, "2020-03-02_6_30am_tweets")
+write_as_csv(MMM_2020_March02_3_30_pm, "2020-03-02_3_30pm_tweets")
+write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
+write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
+
+
+
+
+```
+
+Testing adding dfs together
+```{r}
+first <- read_csv("2020-03-01_9AM_tweets.csv")
+second <- read_csv("2020-03-01_5_50pm_tweets.csv")
+third <- read_csv("2020-03-02_6_30am_tweets.csv")
+fourth <- read_csv("2020-03-02_3_30pm_tweets.csv")
+fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
+sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth) %>% distinct(text, .keep_all = TRUE)
+
+total <- rbind(a,b)
+totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
+MMM_2020 <- totalgrouped
+
+```
+
 
 
 Basic graphs 
 
 ```{r}
-ts_plot(MMM_2020, "2 hours") +
+ts_plot(all_tweets, "2 hours") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
@@ -41,7 +95,7 @@ ts_plot(MMM_2020, "2 hours") +
   
   
 
-ggplot(MMM_2020, aes(created_at))+
+ggplot(all_tweets, aes(created_at))+
   geom_density(alpha=.75, fill="#4cda76")+ # fill with main SAC logo blue
   ggtitle("#2020MMM Tweets")+
   ylab("Density of tweets")+
@@ -54,8 +108,8 @@ ggplot(MMM_2020, aes(created_at))+
 anaylze data
 
 ```{r}
-MMM_2020 %>% count(screen_name, sort=T)
-MMM_2020 %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
+all_tweets %>% count(screen_name, sort=T)
+all_tweets %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
 
 MMM_2020 %>% arrange(-favorite_count) %>% select(favorite_count)
 
@@ -65,26 +119,131 @@ MMM_2020 %>% group_by(screen_name) %>% filter(n() > 5) %>%  ggplot(aes(x= screen
 
 
 
-a <- MMM_2020 %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
+a <- all_tweets %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
 
-a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name)) + geom_bar() + coord_flip()
-
-
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", Sys.time() ), x= "screen name") + theme(legend.position = "none")
 
 
+
+
+
+
+
+all_tweets %>% mutate(day = as_date(created_at)) %>% count(day, sort=T)
 
 ```
 
 
 wordcloud
+note: if there is a _ not showing up, which exmapling why mammls_suck isn't there
 
 ```{r}
-MMM_table <-MMM_2020 %>% unnest_tokens(word, text)
+MMM_table <- all_tweets %>% unnest_tokens(word, text)
 MMM_table <- MMM_table %>% anti_join(stop_words)
 MMM_table <- MMM_table %>% count(word, sort =  T)
 MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https"))
-wordcloud2::wordcloud2(MMM_table_edited, size = .7)
-wordcloud(MMM_table_edited)
+wordcloud2::wordcloud2(MMM_table_edited, size = .4)
+#MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https", "march", "mammal", "madness"))
+
+
+letterCloud(MMM_table_edited, word = "M", size=.4)
+
+filt <- MMM_table_edited %>%  filter(n >10)
+
+figPath <- "/Users/mkissel/Documents/Code/R_projects/2020_MMM/image.png"
+
+
+wordcloud2(demoFreq, figPath = figPath, size = 3,color = "green", backgroundColor = "black")
+```
+
+wordcloud tryuing again
+
+
+```{r}
+MMM_table_edited
+
+wordcloud(words = MMM_table_edited$word, freq = MMM_table_edited$n, min.freq = 1)
+
+library(RColorBrewer)
+
+wordcloud(words = MMM_table_edited$word, freq = MMM_table_edited$n, min.freq = 1, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
+
+
+library(tm)
+dtm <- TermDocumentMatrix(MMM_table_edited)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+```
+
+
+
+sentiment analysis 
+
+```{r}
+bing_word_counts <- MMM_table %>%
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+bing_word_counts %>%
+  group_by(sentiment) %>%
+  top_n(10) %>%
+  ungroup() %>%
+  mutate(word = fct_lump(word, n, 10)) %>%
+  ggplot(aes(word, n, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(y = "Contribution to sentiment",
+       x = NULL) +
+  coord_flip()
+```
+
+
+Sentiment take 2 DELTE?
+
+
+```{r}
+#using all_tweets 
+all_table <- all_tweets %>% unnest_tokens(word, text) %>% anti_join(stop_words) %>%  filter(!word %in% c("2020mmm", "t.co", "https")) %>%  count(word, sort =  T)
+
+sen <- all_table %>% 
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+
+sen %>% group_by(sentiment) %>% top_n(10)
+
+library(reshape2)
+
+
+sen %>% 
+  inner_join(get_sentiments("bing")) %>%
+  count(word, sentiment, sort = TRUE) %>%
+  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
+  comparison.cloud(colors = c("gray20", "gray80"),
+                   max.words = 100)
+
+
+```
+
+
+
+more text
+
+```{r}
+team <- MMM_2020 %>% filter(str_detect(text, "team"))
+
+filter(str_detect(text, "panda")) %>% pull(text)
+
+#lets see if i can pull out teams? or remove screennames from text
+
+teams <- all_tweets %>% filter(str_detect(text, "team"))
+
+
+
+
 ```
 
 
@@ -93,7 +252,7 @@ map data
 
 ```{r}
 MMM_2020 %>% count(country_code)
-rt1 <- lat_lng(MMM_2020)
+rt1 <- lat_lng(all_tweets)
 ```
 
 
@@ -151,7 +310,7 @@ library(hrbrthemes)
 library(ggraph)
 library(tidyverse)
 
-filter(MMM_2020, retweet_count > 0) %>% 
+filter(all_tweets, retweet_count > 0) %>% 
   select(screen_name, mentions_screen_name) %>%
   unnest(mentions_screen_name) %>% 
   filter(!is.na(mentions_screen_name)) %>% 
@@ -162,7 +321,7 @@ V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, names(V(rt_g)), 
 V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, degree(rt_g), 0)) 
 
 
-ggraph(rt_g, layout = 'linear', circular = FALSE) + 
+ggraph(rt_g, layout = 'linear', circular = TRUE) + 
   geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
   geom_node_label(aes(label=node_label, size=node_size),
                   label.size=0, fill="#ffffff66", segment.colour="springgreen",
@@ -172,6 +331,79 @@ ggraph(rt_g, layout = 'linear', circular = FALSE) +
   labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
   theme_graph(base_family=font_rc) +
   theme(legend.position="none")
+
+
+
+
+ggraph(rt_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold") +
+  coord_fixed() +
+  scale_size_area(trans="sqrt") +
+  labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
+  theme_graph(base_family=font_rc) +
+  theme(legend.position="none")
+
+
+#other visal
+#http://pablobarbera.com/big-data-upf/html/02a-networks-intro-visualization.html
+
+
+plot(rt_g)
+
+
+plot(rt_g,
+     vertex.color = "grey", # change color of nodes
+     vertex.label.color = "black", # change color of labels
+     vertex.label.cex = .75, # change size of labels to 75% of original size
+     edge.curved=.25, # add a 25% curve to the edges
+     edge.color="grey20") # change edge color to grey
+
+V(rt_g)$size <- strength(rt_g)
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+#log
+
+
+V(rt_g)$size <- log(strength(rt_g)) * 4 + 3
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+#deal with names?
+
+
+V(rt_g)$label <- ifelse( strength(rt_g)>=5, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+#circle
+
+V(rt_g)$label <- ifelse( strength(rt_g)>=2, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0))
+plot(rt_g,  layout=layout_in_circle, main="Circle")
+
+
+V(rt_g)$label <- ifelse( degree(rt_g)>=20, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0))
+plot(rt_g,  layout=layout_in_circle, main="Circle")
+
+
+#The most popular layouts are force-directed. These algorithms, such as Fruchterman-Reingold, try to position the nodes so that the edges have similar length and there are as few crossing edges as possible. The idea is to generate “clean” layouts, where nodes that are closer to each other share more connections in common that those that are located further apart. Note that this is a non-deterministic algorithm: choosing a different seed will generate different layouts.
+
+
+#force-directed
+
+
+par(mfrow=c(1,2))
+set.seed(777)
+fr <- layout_with_fr(rt_g, niter=1000)
+par(mar=c(0,0,0,0)); plot(rt_g, layout=fr)
+set.seed(666)
+fr <- layout_with_fr(rt_g, niter=1000)
+par(mar=c(0,0,0,0)); plot(rt_g, layout=fr)
 
 ```
 
