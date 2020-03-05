@@ -43,6 +43,17 @@ MMM_2020_March03_12_15_pm<- search_tweets(
 MMM_2020_March04_11_30_am<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
+MMM_2020_March04_11_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+
+MMM_2020_March04_8_45_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+
+
+
+current_time <- Sys.time()
 ```
 
 now i loose the first 29 from set1 and
@@ -57,7 +68,7 @@ write_as_csv(MMM_2020_March02_6_30_am, "2020-03-02_6_30am_tweets")
 write_as_csv(MMM_2020_March02_3_30_pm, "2020-03-02_3_30pm_tweets")
 write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
 write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
-
+write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
 
 
 
@@ -71,11 +82,13 @@ third <- read_csv("2020-03-02_6_30am_tweets.csv")
 fourth <- read_csv("2020-03-02_3_30pm_tweets.csv")
 fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
 sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth) %>% distinct(text, .keep_all = TRUE)
+seventh <- read_csv("2020-03-04_8_45pm_tweets.csv")
 
-total <- rbind(a,b)
-totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
-MMM_2020 <- totalgrouped
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% distinct(text, .keep_all = TRUE)
+
+#total <- rbind(a,b)
+#totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
+#MMM_2020 <- totalgrouped
 
 ```
 
@@ -90,7 +103,7 @@ ts_plot(all_tweets, "2 hours") +
   ggplot2::labs(
     x = NULL, y = NULL,
     title = "Frequency of #2020MMM Twitter statuses",
-    subtitle = Sys.Date(),
+    subtitle = paste("as of", current_time ),
     caption = "\nSource: Data collected from Twitter's REST API via rtweet")
   
   
@@ -100,6 +113,13 @@ ggplot(all_tweets, aes(created_at))+
   ggtitle("#2020MMM Tweets")+
   ylab("Density of tweets")+
   xlab("Time")
+
+ggplot(all_tweets, aes(created_at))+
+  geom_density(alpha=.75, fill="#4cda76") + labs(title = "Frequency of #2020MMM Twitter statuses",
+    subtitle = paste("as of", current_time ),
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet")
+    
+
 
 ```
 
@@ -121,13 +141,26 @@ MMM_2020 %>% group_by(screen_name) %>% filter(n() > 5) %>%  ggplot(aes(x= screen
 
 a <- all_tweets %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
 
-a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", Sys.time() ), x= "screen name") + theme(legend.position = "none")
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name") + theme(legend.position = "none")
 
 
+truth_background <- png::readPNG("LoveMMM.png")
 
+annotation_custom(rasterGrob(truth_background, 
+                                 width = unit(1,"npc"), 
+                                 height = unit(1,"npc")), 
+                      -Inf, Inf, -Inf, Inf) 
 
+library(grid)
 
-
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + 
+  annotation_custom(rasterGrob(truth_background, 
+                                 width = unit(1,"npc"), 
+                                 height = unit(1,"npc")), 
+                      -Inf, Inf, -Inf, Inf)  +
+  geom_bar() + coord_flip() + labs(title = "number of tweets by username that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name", caption = "background img from: https://libguides.asu.edu/MarchMammalMadness") + theme(legend.position = "none")  
+  
+  
 
 all_tweets %>% mutate(day = as_date(created_at)) %>% count(day, sort=T)
 
@@ -156,78 +189,6 @@ figPath <- "/Users/mkissel/Documents/Code/R_projects/2020_MMM/image.png"
 wordcloud2(demoFreq, figPath = figPath, size = 3,color = "green", backgroundColor = "black")
 ```
 
-wordcloud tryuing again
-
-
-```{r}
-MMM_table_edited
-
-wordcloud(words = MMM_table_edited$word, freq = MMM_table_edited$n, min.freq = 1)
-
-library(RColorBrewer)
-
-wordcloud(words = MMM_table_edited$word, freq = MMM_table_edited$n, min.freq = 1, random.order=FALSE, rot.per=0.35,            colors=brewer.pal(8, "Dark2"))
-
-
-library(tm)
-dtm <- TermDocumentMatrix(MMM_table_edited)
-m <- as.matrix(dtm)
-v <- sort(rowSums(m),decreasing=TRUE)
-d <- data.frame(word = names(v),freq=v)
-head(d, 10)
-```
-
-
-
-sentiment analysis 
-
-```{r}
-bing_word_counts <- MMM_table %>%
-  inner_join(get_sentiments("bing")) %>%
-  count(word, sentiment, sort = TRUE) %>%
-  ungroup()
-
-bing_word_counts %>%
-  group_by(sentiment) %>%
-  top_n(10) %>%
-  ungroup() %>%
-  mutate(word = fct_lump(word, n, 10)) %>%
-  ggplot(aes(word, n, fill = sentiment)) +
-  geom_col(show.legend = FALSE) +
-  facet_wrap(~sentiment, scales = "free_y") +
-  labs(y = "Contribution to sentiment",
-       x = NULL) +
-  coord_flip()
-```
-
-
-Sentiment take 2 DELTE?
-
-
-```{r}
-#using all_tweets 
-all_table <- all_tweets %>% unnest_tokens(word, text) %>% anti_join(stop_words) %>%  filter(!word %in% c("2020mmm", "t.co", "https")) %>%  count(word, sort =  T)
-
-sen <- all_table %>% 
-  inner_join(get_sentiments("bing")) %>%
-  count(word, sentiment, sort = TRUE) %>%
-  ungroup()
-
-sen %>% group_by(sentiment) %>% top_n(10)
-
-library(reshape2)
-
-
-sen %>% 
-  inner_join(get_sentiments("bing")) %>%
-  count(word, sentiment, sort = TRUE) %>%
-  acast(word ~ sentiment, value.var = "n", fill = 0) %>%
-  comparison.cloud(colors = c("gray20", "gray80"),
-                   max.words = 100)
-
-
-```
-
 
 
 more text
@@ -243,7 +204,7 @@ teams <- all_tweets %>% filter(str_detect(text, "team"))
 
 
 
-
+MMM_table_edited
 ```
 
 
@@ -310,11 +271,21 @@ library(hrbrthemes)
 library(ggraph)
 library(tidyverse)
 
-filter(all_tweets, retweet_count > 0) %>% 
+filter(MMM_2020, retweet_count > 0) %>% 
   select(screen_name, mentions_screen_name) %>%
   unnest(mentions_screen_name) %>% 
   filter(!is.na(mentions_screen_name)) %>% 
   graph_from_data_frame() -> rt_g
+
+
+
+ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
+  geom_segment(aes(x, y, xend=x, yend=0), color="slateblue") +
+  scale_y_continuous(expand=c(0,0), trans="sqrt") +
+  labs(x="Degree", y="Density (sqrt scale)", title="#rstats Retweet Degree Distribution") +
+  theme_ipsum_rc(grid="Y", axis="x")
+
+
 
 #add labels for nodes that have a degree of 20 or more 
 V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, names(V(rt_g)), "")) 
@@ -335,16 +306,28 @@ ggraph(rt_g, layout = 'linear', circular = TRUE) +
 
 
 
-ggraph(rt_g, layout = 'linear', circular = TRUE) + 
-  geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(color = "darkslategray4", size = 5) +
+        geom_node_text(aes(label = name), vjust = 1.8) +
+        ggtitle(expression(paste("Word Network in Jane Austen's ", 
+                                 italic("Pride and Prejudice")))) +
+        theme_void()
+  
+
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(color = "darkslategray4", size = 5) +
   geom_node_label(aes(label=node_label, size=node_size),
                   label.size=0, fill="#ffffff66", segment.colour="springgreen",
-                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold") +
-  coord_fixed() +
-  scale_size_area(trans="sqrt") +
-  labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
-  theme_graph(base_family=font_rc) +
-  theme(legend.position="none")
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+  
+
+  
 
 
 #other visal
@@ -405,7 +388,246 @@ set.seed(666)
 fr <- layout_with_fr(rt_g, niter=1000)
 par(mar=c(0,0,0,0)); plot(rt_g, layout=fr)
 
+
+
+#more
+#https://juliasilge.com/blog/life-changing-magic/
+
+
+
+
+
+rt_g %>% 
+   ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+        geom_node_point(color = "darkslategray4", size = 5) +
+        geom_node_text(aes(label = name), vjust = 1.8) +
+        ggtitle(expression(paste("Word Network in Jane Austen's ", 
+                                 italic("Pride and Prejudice")))) +
+        theme_void()
+
+
+#blah for above
+
+
+filter(all_tweets, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>%
+    filter(!is.na(mentions_screen_name)) %>%  
+  pivot_longer(cols = mentions_screen_name, names_to = "mentions")
+  
 ```
 
 
+
+ABOVE IS kinda messy
+http://graphtweets.john-coene.com/
+
+
+
+BELOw looks nicer
+
+```{r}
+install.packages("graphTweets")
+install.packages("sigmajs")
+library(graphTweets)
+library(sigmajs)
+
+#lest stats by adding te dfs togehte tthat eep the ino in list forms
+
+x <- rbind(MMM_2020_b_March03_5_50_pm, MMM_2020_March02_6_30_am, MMM_2020_March02_3_30_pm, MMM_2020_March03_12_15_pm, MMM_2020_March04_11_30_am)
+
+ x %>% distinct(text, .keep_all = TRUE)
+  
+  
+x %>% gt_edges(text, screen_name, status_id) %>% 
+  gt_graph() %>% 
+  plot() #bad
+
+######
+
+MMM_2020 %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+#smaller
+MMM_2020_small <- MMM_2020 %>% filter(!is.na(mentions_screen_name)) %>% gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+
+MMM_2020 %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+nodes <- gt$nodes %>% 
+  mutate(
+    id = nodes,
+    label = nodes,
+    size = n,
+    color = "#1967be"
+  ) 
+
+edges <- gt$edges %>% 
+  mutate(
+    id = 1:n()
+  )
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000) %>%  sg_drag_nodes() %>% sg_cluster()
+
+
+#########################################3
+#try various things fomr http://sigmajs.john-coene.com/articles/cluster.html etc
+#
+
+MMM_2020 %>% filter(!is.na(mentions_screen_name)) %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+
+
+
+
+####################3
+
+net <- all_tweets %>% 
+  gt_edges(screen_name, hashtags) %>% 
+  gt_nodes() %>% 
+  gt_collect()
+
+edges <- net$edges
+nodes <- net$nodes
+
+edges$id <- seq(1, nrow(edges))
+nodes$id <- nodes$nodes
+nodes$label <- nodes$nodes
+nodes$size <- nodes$n
+nodes$color <- ifelse(nodes$type == "user", "#0084b4", "#1dcaff")
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+#to deal with multple maybe this will work
+
+net <- MMM_2020_b_March03_5_50_pm %>% 
+  gt_co_edges(mentions_screen_name) %>%
+  gt_nodes() %>% 
+  gt_collect()
+
+c(edges, nodes) %<-% net
+
+edges <- edges %>% 
+  mutate(id = 1:n()) 
+
+nodes <- nodes %>% 
+  mutate(
+    id = nodes,
+    label = id,
+    size = n
+  )
+
+sigmajs() %>% 
+  sg_nodes(nodes, id, label, size) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_cluster(
+    colors = c(
+      "#0084b4",
+      "#00aced",
+      "#1dcaff",
+      "#c0deed"
+      )
+  ) %>% 
+  sg_layout(layout = igraph::layout.fruchterman.reingold) %>% 
+  sg_neighbours() %>% 
+  sg_settings(
+    maxNodeSize = 3,
+    defaultEdgeColor = "#a3a3a3",
+    edgeColor = "default"
+  )
+
+#ok, above works but aisl on all_tweets. i think tis is becuase, all_tweets has the mentons_scren ame as charte not as a list...can weix or is it fucked
+#also check if that iw whyother lok weird
+
+
+#update it is! so can i read them back in as a list?
+#OR keep what i have and bind togehter to avoit raeding in
+#or fix all_tweet
+#or we can just do it by day? i wonder how many twett for each battle day?
+
+w <- all_tweets %>% as.list(mentions_screen_name)
+
+#below shld work!!!!!
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  mutate(
+    hashtags = gsub("\\[|\\]|'", "", mentions_screen_name)
+  ) %>% 
+  tidyr::separate_rows(hashtags, sep = ", ") %>% 
+  tidyr::nest(hashtags = c(hashtags))
+
+
+
+
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+tidy_tweets$mentions_screen_name <- tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+
+tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+nodes <- gt$nodes %>% 
+  mutate(
+    id = nodes,
+    label = nodes,
+    size = n,
+    color = "#1967be"
+  ) 
+
+edges <- gt$edges %>% 
+  mutate(
+    id = 1:n()
+  )
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+``
+
+
+g %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+
+```
 
