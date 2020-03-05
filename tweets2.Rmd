@@ -1,0 +1,705 @@
+---
+title: "MMM_tweets"
+author: "Marc Kissel"
+date: "2/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r needed libraries}
+library(rtweet)
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+library(wordcloud2)
+library(lubridate)
+```
+
+
+first load the tweets
+
+```{r}
+MMM_2020<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+Sys.time()
+
+
+MMM_2020_March02_6_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+
+MMM_2020_March02_3_30_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+MMM_2020_March03_12_15_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE) 
+
+
+MMM_2020_March04_11_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+MMM_2020_March04_11_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+
+MMM_2020_March04_8_45_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+
+
+
+current_time <- Sys.time()
+```
+
+now i loose the first 29 from set1 and
+
+Export data
+
+```{r}
+
+write_as_csv(MMM_2020, "2020-03-01_9AM_tweets")
+write_as_csv(MMM_2020_b_March03_5_50_pm, "2020-03-01_5_50pm_tweets")
+write_as_csv(MMM_2020_March02_6_30_am, "2020-03-02_6_30am_tweets")
+write_as_csv(MMM_2020_March02_3_30_pm, "2020-03-02_3_30pm_tweets")
+write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
+write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
+write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
+
+
+
+```
+
+Testing adding dfs together
+```{r}
+first <- read_csv("2020-03-01_9AM_tweets.csv")
+second <- read_csv("2020-03-01_5_50pm_tweets.csv")
+third <- read_csv("2020-03-02_6_30am_tweets.csv")
+fourth <- read_csv("2020-03-02_3_30pm_tweets.csv")
+fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
+sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
+seventh <- read_csv("2020-03-04_8_45pm_tweets.csv")
+
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% distinct(text, .keep_all = TRUE)
+
+#total <- rbind(a,b)
+#totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
+#MMM_2020 <- totalgrouped
+
+```
+
+
+
+Basic graphs 
+
+```{r}
+ts_plot(all_tweets, "2 hours") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Frequency of #2020MMM Twitter statuses",
+    subtitle = paste("as of", current_time ),
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet")
+  
+  
+
+ggplot(all_tweets, aes(created_at))+
+  geom_density(alpha=.75, fill="#4cda76")+ # fill with main SAC logo blue
+  ggtitle("#2020MMM Tweets")+
+  ylab("Density of tweets")+
+  xlab("Time")
+
+ggplot(all_tweets, aes(created_at))+
+  geom_density(alpha=.75, fill="#4cda76") + labs(title = "Frequency of #2020MMM Twitter statuses",
+    subtitle = paste("as of", current_time ),
+    caption = "\nSource: Data collected from Twitter's REST API via rtweet")
+    
+
+
+```
+
+
+
+anaylze data
+
+```{r}
+all_tweets %>% count(screen_name, sort=T)
+all_tweets %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
+
+MMM_2020 %>% arrange(-favorite_count) %>% select(favorite_count)
+
+MMM_2020 %>% group_by(screen_name) %>% count(sort=T)
+
+MMM_2020 %>% group_by(screen_name) %>% filter(n() > 5) %>%  ggplot(aes(x= screen_name)) + geom_bar() + coord_flip()
+
+
+
+a <- all_tweets %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
+
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name") + theme(legend.position = "none")
+
+
+truth_background <- png::readPNG("LoveMMM.png")
+
+annotation_custom(rasterGrob(truth_background, 
+                                 width = unit(1,"npc"), 
+                                 height = unit(1,"npc")), 
+                      -Inf, Inf, -Inf, Inf) 
+
+library(grid)
+
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + 
+  annotation_custom(rasterGrob(truth_background, 
+                                 width = unit(1,"npc"), 
+                                 height = unit(1,"npc")), 
+                      -Inf, Inf, -Inf, Inf)  +
+  geom_bar() + coord_flip() + labs(title = "number of tweets by username that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name", caption = "background img from: https://libguides.asu.edu/MarchMammalMadness") + theme(legend.position = "none")  
+  
+  
+
+all_tweets %>% mutate(day = as_date(created_at)) %>% count(day, sort=T)
+
+```
+
+
+wordcloud
+note: if there is a _ not showing up, which exmapling why mammls_suck isn't there
+
+```{r}
+MMM_table <- all_tweets %>% unnest_tokens(word, text)
+MMM_table <- MMM_table %>% anti_join(stop_words)
+MMM_table <- MMM_table %>% count(word, sort =  T)
+MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https"))
+wordcloud2::wordcloud2(MMM_table_edited, size = .4)
+#MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https", "march", "mammal", "madness"))
+
+
+letterCloud(MMM_table_edited, word = "M", size=.4)
+
+filt <- MMM_table_edited %>%  filter(n >10)
+
+figPath <- "/Users/mkissel/Documents/Code/R_projects/2020_MMM/image.png"
+
+
+wordcloud2(demoFreq, figPath = figPath, size = 3,color = "green", backgroundColor = "black")
+```
+
+
+
+more text
+
+```{r}
+team <- MMM_2020 %>% filter(str_detect(text, "team"))
+
+filter(str_detect(text, "panda")) %>% pull(text)
+
+#lets see if i can pull out teams? or remove screennames from text
+
+teams <- all_tweets %>% filter(str_detect(text, "team"))
+
+
+
+MMM_table_edited
+```
+
+
+map data
+(note that most tweets don't have loc data)
+
+```{r}
+MMM_2020 %>% count(country_code)
+rt1 <- lat_lng(all_tweets)
+```
+
+
+map itself, version 1
+
+```{r}
+par(mar = c(0, 0, 0, 0))
+maps::map("world", lwd = .25)
+with(rt1, points(lng, lat, pch = 20, cex = .75, col = rgb(0, .3, .7, .75)))
+
+```
+
+map, version 2 w/ leaflet 
+
+```{r}
+library(leaflet)
+leaflet() %>% addTiles() %>% 
+  setView(lat = 50.85045, lng = 4.34878, zoom=0) %>%  addMarkers(~lng, ~lat, data = rt1, popup = ~as.character(text), label = ~as.character(screen_name)) 
+```
+
+
+stream data:
+example from https://rtweet.info/articles/stream.html#stream_tweets
+
+
+```{r}
+q <- "2020MMM"
+library(tidygraph)
+
+## Stream time in seconds so for one minute set timeout = 60
+## For larger chunks of time, I recommend multiplying 60 by the number
+## of desired minutes. This method scales up to hours as well
+## (x * 60 = x mins, x * 60 * 60 = x hours)
+
+## Stream for 30 minutes
+streamtime <- 30 * 60 ## Stream for 30 minutes
+streamtime <- 30 * 1 
+filename <- "rtelect.json"
+rt <- stream_tweets("2020MMM", timeout = 90, file_name = filename) # do or 9 seconds
+
+library(rjson)
+result <- fromJSON(file = "rtelect.json")
+```
+
+
+network?
+https://rud.is/books/21-recipes/visualizing-a-graph-of-retweet-relationships.html
+
+
+```{r}
+library(tidygraph)
+library(rtweet)
+library(igraph)
+library(hrbrthemes)
+library(ggraph)
+library(tidyverse)
+
+
+filter(all_tweets, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_g
+
+ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
+  geom_segment(aes(x, y, xend=x, yend=0), color="slateblue") +
+  scale_y_continuous(expand=c(0,0), trans="sqrt") +
+  labs(x="Degree", y="Density (sqrt scale)", title="#rstats Retweet Degree Distribution") +
+  theme_ipsum_rc(grid="Y", axis="x")
+
+
+#add labels for nodes that have a degree of 20 or more 
+V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, degree(rt_g), 0)) 
+
+#stnght?
+V(rt_g)$node_label <- unname(ifelse(strength(rt_g)[V(rt_g)] > 10, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(strength(rt_g)[V(rt_g)] > 10, degree(rt_g), 0))
+
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(color = "darkslategray4", size = 5) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+  
+```
+
+
+
+
+
+
+
+
+
+#below shld work!!!!!
+
+```{r}
+
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  mutate(
+    hashtags = gsub("\\[|\\]|'", "", mentions_screen_name)
+  ) %>% 
+  tidyr::separate_rows(hashtags, sep = ", ") %>% 
+  tidyr::nest(hashtags = c(hashtags))
+
+
+
+
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+tidy_tweets$mentions_screen_name <- tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+
+tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+nodes <- gt$nodes %>% 
+  mutate(
+    id = nodes,
+    label = nodes,
+    size = n,
+    color = "#1967be"
+  ) 
+
+edges <- gt$edges %>% 
+  mutate(
+    id = 1:n()
+  )
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000) %>%  sg_drag_nodes() %>% sg_cluster()
+
+g %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+```
+
+
+
+
+
+
+Below here is scratch
+
+
+
+```{r}
+install.packages("graphTweets")
+install.packages("sigmajs")
+library(graphTweets)
+library(sigmajs)
+
+#lest stats by adding te dfs togehte tthat eep the ino in list forms
+
+x <- rbind(MMM_2020_b_March03_5_50_pm, MMM_2020_March02_6_30_am, MMM_2020_March02_3_30_pm, MMM_2020_March03_12_15_pm, MMM_2020_March04_11_30_am)
+
+ x %>% distinct(text, .keep_all = TRUE)
+  
+  
+x %>% gt_edges(text, screen_name, status_id) %>% 
+  gt_graph() %>% 
+  plot() #bad
+
+######
+
+MMM_2020 %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+#smaller
+MMM_2020_small <- MMM_2020 %>% filter(!is.na(mentions_screen_name)) %>% gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes(meta = TRUE) %>% 
+  gt_collect() -> graph
+
+
+MMM_2020 %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+nodes <- gt$nodes %>% 
+  mutate(
+    id = nodes,
+    label = nodes,
+    size = n,
+    color = "#1967be"
+  ) 
+
+edges <- gt$edges %>% 
+  mutate(
+    id = 1:n()
+  )
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000) %>%  sg_drag_nodes() %>% sg_cluster()
+
+
+#########################################3
+#try various things fomr http://sigmajs.john-coene.com/articles/cluster.html etc
+#
+
+MMM_2020 %>% filter(!is.na(mentions_screen_name)) %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+
+
+
+
+
+####################3
+
+net <- all_tweets %>% 
+  gt_edges(screen_name, hashtags) %>% 
+  gt_nodes() %>% 
+  gt_collect()
+
+edges <- net$edges
+nodes <- net$nodes
+
+edges$id <- seq(1, nrow(edges))
+nodes$id <- nodes$nodes
+nodes$label <- nodes$nodes
+nodes$size <- nodes$n
+nodes$color <- ifelse(nodes$type == "user", "#0084b4", "#1dcaff")
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000)
+
+#to deal with multple maybe this will work
+
+net <- MMM_2020_b_March03_5_50_pm %>% 
+  gt_co_edges(mentions_screen_name) %>%
+  gt_nodes() %>% 
+  gt_collect()
+
+c(edges, nodes) %<-% net
+
+edges <- edges %>% 
+  mutate(id = 1:n()) 
+
+nodes <- nodes %>% 
+  mutate(
+    id = nodes,
+    label = id,
+    size = n
+  )
+
+sigmajs() %>% 
+  sg_nodes(nodes, id, label, size) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_cluster(
+    colors = c(
+      "#0084b4",
+      "#00aced",
+      "#1dcaff",
+      "#c0deed"
+      )
+  ) %>% 
+  sg_layout(layout = igraph::layout.fruchterman.reingold) %>% 
+  sg_neighbours() %>% 
+  sg_settings(
+    maxNodeSize = 3,
+    defaultEdgeColor = "#a3a3a3",
+    edgeColor = "default"
+  )
+
+#ok, above works but aisl on all_tweets. i think tis is becuase, all_tweets has the mentons_scren ame as charte not as a list...can weix or is it fucked
+#also check if that iw whyother lok weird
+
+
+#update it is! so can i read them back in as a list?
+#OR keep what i have and bind togehter to avoit raeding in
+#or fix all_tweet
+#or we can just do it by day? i wonder how many twett for each battle day?
+
+w <- all_tweets %>% as.list(mentions_screen_name)
+
+
+```
+
+
+
+
+
+```{r}
+library(tidygraph)
+library(rtweet)
+library(igraph)
+library(hrbrthemes)
+library(ggraph)
+library(tidyverse)
+
+filter(MMM_2020, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_g
+
+
+
+ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
+  geom_segment(aes(x, y, xend=x, yend=0), color="slateblue") +
+  scale_y_continuous(expand=c(0,0), trans="sqrt") +
+  labs(x="Degree", y="Density (sqrt scale)", title="#rstats Retweet Degree Distribution") +
+  theme_ipsum_rc(grid="Y", axis="x")
+
+
+
+#add labels for nodes that have a degree of 20 or more 
+V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 20, degree(rt_g), 0)) 
+
+
+#strenght?
+
+V(rt_g)$node_label <- unname(ifelse(strength(rt_g)[V(rt_g)] > 20, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(strength(rt_g)[V(rt_g)] > 20, degree(rt_g), 0)) 
+
+
+ggraph(rt_g, layout = 'linear', circular = TRUE) + 
+  geom_edge_arc(edge_width=0.125, aes(alpha=..index..)) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold") +
+  coord_fixed() +
+  scale_size_area(trans="sqrt") +
+  labs(title="Retweet Relationships", subtitle="Most retweeted screen names labeled. Darkers edges == more retweets. Node size == larger degree") +
+  theme_graph(base_family=font_rc) +
+  theme(legend.position="none")
+
+
+
+
+
+  
+
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(color = "darkslategray4", size = 5) +
+  geom_node_label(aes(label=node_label, size=node_size),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+
+
+#
+#deal with names?
+filter(all_tweets, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_g
+
+V(rt_g)$label <- ifelse( strength(rt_g)>=5, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+
+  
+
+
+#other visal
+#http://pablobarbera.com/big-data-upf/html/02a-networks-intro-visualization.html
+
+
+plot(rt_g)
+
+
+plot(rt_g,
+     vertex.color = "grey", # change color of nodes
+     vertex.label.color = "black", # change color of labels
+     vertex.label.cex = .75, # change size of labels to 75% of original size
+     edge.curved=.25, # add a 25% curve to the edges
+     edge.color="grey20") # change edge color to grey
+
+V(rt_g)$size <- strength(rt_g)
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+#log
+
+
+V(rt_g)$size <- log(strength(rt_g)) * 4 + 3
+par(mar=c(0,0,0,0)); plot(rt_g)
+
+
+
+#circle
+
+V(rt_g)$label <- ifelse( strength(rt_g)>=2, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0))
+plot(rt_g,  layout=layout_in_circle, main="Circle")
+
+
+V(rt_g)$label <- ifelse( degree(rt_g)>=20, V(rt_g)$name, NA )
+par(mar=c(0,0,0,0))
+plot(rt_g,  layout=layout_in_circle, main="Circle")
+
+
+#The most popular layouts are force-directed. These algorithms, such as Fruchterman-Reingold, try to position the nodes so that the edges have similar length and there are as few crossing edges as possible. The idea is to generate “clean” layouts, where nodes that are closer to each other share more connections in common that those that are located further apart. Note that this is a non-deterministic algorithm: choosing a different seed will generate different layouts.
+
+
+#force-directed
+
+
+par(mfrow=c(1,2))
+set.seed(777)
+fr <- layout_with_fr(rt_g, niter=1000)
+par(mar=c(0,0,0,0)); plot(rt_g, layout=fr)
+set.seed(666)
+fr <- layout_with_fr(rt_g, niter=1000)
+par(mar=c(0,0,0,0)); plot(rt_g, layout=fr)
+
+
+
+#more
+#https://juliasilge.com/blog/life-changing-magic/
+
+
+
+
+
+rt_g %>% 
+   ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n)) +
+        geom_node_point(color = "darkslategray4", size = 5) +
+        geom_node_text(aes(label = name), vjust = 1.8) +
+        ggtitle(expression(paste("Word Network in Jane Austen's ", 
+                                 italic("Pride and Prejudice")))) +
+        theme_void()
+
+
+#blah for above
+
+
+filter(all_tweets, retweet_count > 0) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>%
+    filter(!is.na(mentions_screen_name)) %>%  
+  pivot_longer(cols = mentions_screen_name, names_to = "mentions")
+  
+```
+
