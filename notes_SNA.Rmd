@@ -342,3 +342,39 @@ clp <- cluster_label_prop(net)
 plot(clp, net)
 ```
 
+
+```{r}
+hs <- hub_score(rt_g, weights=NA)$vector
+
+as <- authority_score(rt_g, weights=NA)$vector
+
+
+
+par(mfrow=c(1,2))
+
+ plot(rt_g, vertex.size=hs*50, main="Hubs")
+
+ plot(rt_g, vertex.size=as*30, main="Authorities")
+```
+
+
+scratch
+
+
+```{r}
+dump_tidy_tweets <- all_tweets %>% 
+  select(screen_name, text, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+dump_tidy_tweets$mentions_screen_name <- dump_tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+
+dump_tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> dump_gt
+```
+
