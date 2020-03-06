@@ -54,6 +54,9 @@ MMM_2020_March04_8_45_pm<- search_tweets(
 MMM_2020_March05_6_10_pm<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
+MMM_2020_March06_1_30_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
 current_time <- Sys.time()
 ```
 
@@ -71,6 +74,7 @@ write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
 write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
 write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
 write_as_csv(MMM_2020_March05_6_10_pm, "2020-03-05_6_10pm_tweets")
+write_as_csv(MMM_2020_March06_1_30_pm, "2020-03-06_1_30pm_tweets")
 
 
 
@@ -86,7 +90,9 @@ fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
 sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
 seventh <- read_csv("2020-03-04_8_45pm_tweets.csv")
 eight <- read_csv("2020-03-05_6_10pm_tweets.csv")
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% distinct(text, .keep_all = TRUE)
+ninth <- read_csv("2020-03-06_1_30pm_tweets.csv")
+  
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eight, ninth) %>% distinct(text, .keep_all = TRUE)
 
 #total <- rbind(a,b)
 #totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
