@@ -264,6 +264,14 @@ result <- fromJSON(file = "rtelect.json")
 network?
 https://rud.is/books/21-recipes/visualizing-a-graph-of-retweet-relationships.html
 
+make sure it is directed?....i assume it defaults for twitterGrpah but bit sure about igraph? might need to specify I THINK>.....
+
+other things:
+
+think about looking at reciprocity for this netowkr (The proportion of reciprocated ties). maybe compare diffeent groups etc? 
+and transivity
+
+
 
 ```{r}
 library(tidygraph)
@@ -274,7 +282,7 @@ library(ggraph)
 library(tidyverse)
 
 
-filter(all_tweets, retweet_count > 0) %>% 
+filter(tidy_tweets) %>% 
   select(screen_name, mentions_screen_name) %>%
   unnest(mentions_screen_name) %>% 
   filter(!is.na(mentions_screen_name)) %>% 
@@ -292,8 +300,8 @@ V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, names(V(rt_g)), "
 V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, degree(rt_g), 0)) 
 
 #stnght?
-V(rt_g)$node_label <- unname(ifelse(strength(rt_g)[V(rt_g)] > 10, names(V(rt_g)), "")) 
-V(rt_g)$node_size <- unname(ifelse(strength(rt_g)[V(rt_g)] > 10, degree(rt_g), 0))
+V(rt_g)$node_label <- unname(ifelse(strength(rt_g)[V(rt_g)] > 5, names(V(rt_g)), "")) # creats node lable if sregn >5
+V(rt_g)$node_size <- unname(ifelse(strength(rt_g)[V(rt_g)] > 5, degree(rt_g), 0))
 
 
 rt_g %>% ggraph(layout = "fr") +
@@ -301,7 +309,7 @@ rt_g %>% ggraph(layout = "fr") +
         geom_node_point(color = "darkslategray4", size = 5) +
   geom_node_label(aes(label=node_label, size=node_size),
                   label.size=0, fill="#ffffff66", segment.colour="springgreen",
-                  color="slateblue", repel=TRUE, family=font_rc, fontface="bold")      +
+                  color="slateblue", repel=TRUE, fontface="bold")      +
         ggtitle(expression(paste("Who talks to who in", 
                                  italic("March Mammal Madness")))) +
         theme_void()
@@ -310,6 +318,41 @@ rt_g %>% ggraph(layout = "fr") +
 
 
 
+Other network things with igraph
+
+
+```{r}
+clp <- cluster_label_prop(rt_g)
+plot(clp, rt_g)
+plot(clp, rt_g, vertex.label=V(rt_g)$node_label) #after using above to set node_label
+
+plot(clp, rt_g, vertex.label=V(rt_g)$node_label, vertex.size=V(rt_g)$node_size ) #not good
+
+
+
+#hubs
+
+hs <- hub_score(rt_g, weights=NA)$vector
+
+as <- authority_score(rt_g, weights=NA)$vector
+
+
+par(mfrow=c(1,2))
+
+ plot(rt_g, vertex.size=hs*50, main="Hubs")
+
+ plot(rt_g, vertex.size=as*30, main="Authorities")
+ 
+ 
+par(mfrow=c(1,2))
+
+ plot(rt_g, vertex.size=hs*50, main="Hubs", vertex.label=V(rt_g)$node_label)
+
+ plot(rt_g, vertex.size=as*30, main="Authorities", vertex.label=V(rt_g)$node_label)
+
+
+
+```
 
 
 
@@ -615,7 +658,8 @@ filter(all_tweets, retweet_count > 0) %>%
   filter(!is.na(mentions_screen_name)) %>% 
   graph_from_data_frame() -> rt_g
 
-V(rt_g)$label <- ifelse( strength(rt_g)>=5, V(rt_g)$name, NA )
+V(rt_g)$label <- ifelse( strength(rt_g)>=5, V(rt_g)$name, NA )  # this creates the node label and gives a name is strneght is above 5
+
 par(mar=c(0,0,0,0)); plot(rt_g)
 
 
