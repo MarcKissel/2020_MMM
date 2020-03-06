@@ -54,9 +54,6 @@ MMM_2020_March04_8_45_pm<- search_tweets(
 MMM_2020_March05_6_10_pm<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
-MMM_2020_March06_1_30_pm<- search_tweets(
-  "#2020MMM", n = 18000, include_rts = FALSE)
-
 current_time <- Sys.time()
 ```
 
@@ -74,7 +71,6 @@ write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
 write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
 write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
 write_as_csv(MMM_2020_March05_6_10_pm, "2020-03-05_6_10pm_tweets")
-write_as_csv(MMM_2020_March06_1_30_pm, "2020-03-06_1_30pm_tweets")
 
 
 
@@ -90,9 +86,7 @@ fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
 sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
 seventh <- read_csv("2020-03-04_8_45pm_tweets.csv")
 eight <- read_csv("2020-03-05_6_10pm_tweets.csv")
-ninth <- read_csv("2020-03-06_1_30pm_tweets.csv")
-  
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eight, ninth) %>% distinct(text, .keep_all = TRUE)
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% distinct(text, .keep_all = TRUE)
 
 #total <- rbind(a,b)
 #totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
@@ -172,6 +166,9 @@ a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_
 
 all_tweets %>% mutate(day = as_date(created_at)) %>% count(day, sort=T)
 
+
+
+all_tweets %>% distinct(screen_name, .keep_all = TRUE) %>%  count(location, sort=T)
 ```
 
 
@@ -268,6 +265,63 @@ result <- fromJSON(file = "rtelect.json")
 
 
 network?
+
+#first step is to fix issues. this fixes the mentions_screen_name col. might need for others as well. Also note i loose other cols. might either want to see if i can keep them or subset before if i want to look at different dates?
+
+
+```{r}
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  mutate(
+    hashtags = gsub("\\[|\\]|'", "", mentions_screen_name)
+  ) %>% 
+  tidyr::separate_rows(hashtags, sep = ", ") %>% 
+  tidyr::nest(hashtags = c(hashtags))
+
+
+
+
+tidy_tweets <- all_tweets %>% 
+  select(screen_name, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+tidy_tweets$mentions_screen_name <- tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+
+tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> gt
+```
+
+# below is a way to keep more cols, at least at first...
+
+```{r}
+
+```{r}
+dump_tidy_tweets <- all_tweets %>% 
+  select(screen_name, text, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+dump_tidy_tweets$mentions_screen_name <- dump_tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+#below i am droppng the text. i wonder if way to keep it as attibutr? that would be totes long though
+dump_tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> dump_gt
+```
+
+
+```
+
+
 https://rud.is/books/21-recipes/visualizing-a-graph-of-retweet-relationships.html
 
 make sure it is directed?....i assume it defaults for twitterGrpah but bit sure about igraph? might need to specify I THINK>.....
@@ -301,7 +355,7 @@ ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
   theme_ipsum_rc(grid="Y", axis="x")
 
 
-#add labels for nodes that have a degree of 20 or more 
+#add labels for nodes that have a degree of 5 or more . if there is lower than 5 there is no label
 V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, names(V(rt_g)), "")) 
 V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, degree(rt_g), 0)) 
 
@@ -328,6 +382,103 @@ Other network things with igraph
 
 
 ```{r}
+#network measures
+# see https://www.youtube.com/watch?v=0xsM0MbRPGE
+
+degree(rt_g) #number of connections
+degree(rt_g, mode = "in")
+degree(rt_g, mode = "out")
+
+diameter(rt_g)
+
+ecount(rt_g) #how many edges
+vcount(rt_g)
+edge_density(rt_g, loops = F)
+reciprocity(rt_g) #in this case, = .15 so 15% reciprocity
+#one thing to think about is does this increase over time? i.e. as the game increases do more people follow each other? could sep by days and look at it that way? but to do that i'd have to redo the tidytweets df and make sure to subset correctyl
+
+closeness(rt_g) #also something to look at. who is closest? 
+
+betweenness(rt_g) # who is inbetween 
+edge_betweenness(rt_g)
+
+
+# we can add things like we did above
+
+V(rt_g)$degree <- degree(rt_g)
+hist(V(rt_g)$degree) # amny nodes with few connection
+
+#then use above to look by degree
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(aes(size = degree)) +
+  geom_node_label(aes(label=node_label),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+#looking better...just have too many labed i think
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(aes(size = degree)) +
+         ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+
+#below try a dif layout
+
+rt_g %>% ggraph(layout = "kk") +
+        geom_edge_link() +
+        geom_node_point(aes(size = degree)) +
+         ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+
+#think about coloring by degree?
+
+rt_g %>% ggraph(layout = "fr") +
+        geom_edge_link() +
+        geom_node_point(aes(size = degree, color = degree)) +
+         ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void()
+
+
+#hub3
+#hub have outgoing link and authoris have many incominf
+
+
+hs <- hub_score(rt_g, weights=NA)$vector
+
+as <- authority_score(rt_g, weights=NA)$vector
+
+par(mfrow =c(1,2))
+
+plot(rt_g,
+     main = "hubs",
+     vertex.size = hs*30,
+     vertex.color = rainbow(381),
+     vertex.label = NA,
+     layout=layout.kamada.kawai)
+
+plot(rt_g,
+     main = "Auth",
+     vertex.size = as*30,
+     vertex.color = rainbow(381),
+     vertex.label = NA,
+     layout=layout.kamada.kawai)
+#think about how to get rid of lables here or only label ones that have a certain value? shouldn't be hard. just follow aboe
+```
+
+
+belwo is other stuff from igaph looking at diffeent things like cominty...might want to think more on this
+```{r}
+####################################
+###############################################
+
 clp <- cluster_label_prop(rt_g)
 plot(clp, rt_g)
 plot(clp, rt_g, vertex.label=V(rt_g)$node_label) #after using above to set node_label
@@ -337,6 +488,7 @@ plot(clp, rt_g, vertex.label=V(rt_g)$node_label, vertex.size=V(rt_g)$node_size )
 
 
 #hubs
+#hub have outgoing link and authoris have many incominf
 
 hs <- hub_score(rt_g, weights=NA)$vector
 
