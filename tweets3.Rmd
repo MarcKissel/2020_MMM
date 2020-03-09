@@ -17,12 +17,20 @@ library(tidytext)
 library(wordcloud)
 library(wordcloud2)
 library(lubridate)
+library(grid)
+library(tidygraph)
+library(igraph)
+library(hrbrthemes)
+library(ggraph)
+library(sigmajs)
+library(graphTweets)
+
 ```
 
 
 first load the tweets
 
-```{r}
+```{r loading tweets}
 MMM_2020<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE) 
 
@@ -54,7 +62,20 @@ MMM_2020_March04_8_45_pm<- search_tweets(
 MMM_2020_March05_6_10_pm<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
+
+MMM_2020_March06_1_30_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+MMM_2020_March08_12_10_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+
+MMM_2020_March09_9_30_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
 current_time <- Sys.time()
+
+
 ```
 
 now i loose the first 29 from set1 and
@@ -71,13 +92,17 @@ write_as_csv(MMM_2020_March03_12_15_pm, "2020-03-03_12_15pm_tweets")
 write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
 write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
 write_as_csv(MMM_2020_March05_6_10_pm, "2020-03-05_6_10pm_tweets")
+write_as_csv(MMM_2020_March06_1_30_pm, "2020-03-06_1_30pm_tweets")
 
+write_as_csv(MMM_2020_March08_12_10_am, "2020-03-08_12_10am_tweets" )
+
+write_as_csv(MMM_2020_March09_9_30_am, "2020-03-09_9_30am_tweets" )
 
 
 ```
 
 Testing adding dfs together
-```{r}
+```{r adding data together}
 first <- read_csv("2020-03-01_9AM_tweets.csv")
 second <- read_csv("2020-03-01_5_50pm_tweets.csv")
 third <- read_csv("2020-03-02_6_30am_tweets.csv")
@@ -85,8 +110,12 @@ fourth <- read_csv("2020-03-02_3_30pm_tweets.csv")
 fifth <- read_csv("2020-03-03_12_15pm_tweets.csv")
 sixth <-read_csv("2020-03-04_11_30am_tweets.csv")
 seventh <- read_csv("2020-03-04_8_45pm_tweets.csv")
-eight <- read_csv("2020-03-05_6_10pm_tweets.csv")
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% distinct(text, .keep_all = TRUE)
+eighth <- read_csv("2020-03-05_6_10pm_tweets.csv")
+ninth <- read_csv("2020-03-06_1_30pm_tweets.csv")
+tenth <- read_csv("2020-03-08_12_10am_tweets.csv")
+eleven <- read_csv("2020-03-09_9_30am_tweets.csv")
+
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleven) %>% distinct(text, .keep_all = TRUE)
 
 #total <- rbind(a,b)
 #totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
@@ -98,7 +127,7 @@ all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh) %>% dis
 
 Basic graphs 
 
-```{r}
+```{r basic graphs}
 ts_plot(all_tweets, "2 hours") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
@@ -110,11 +139,12 @@ ts_plot(all_tweets, "2 hours") +
   
   
 
-ggplot(all_tweets, aes(created_at))+
+#ggplot(all_tweets, aes(created_at))+
   geom_density(alpha=.75, fill="#4cda76")+ # fill with main SAC logo blue
   ggtitle("#2020MMM Tweets")+
   ylab("Density of tweets")+
   xlab("Time")
+
 
 ggplot(all_tweets, aes(created_at))+
   geom_density(alpha=.75, fill="#4cda76") + labs(title = "Frequency of #2020MMM Twitter statuses",
@@ -129,11 +159,11 @@ ggplot(all_tweets, aes(created_at))+
 
 anaylze data
 
-```{r}
+```{r basic figs}
 all_tweets %>% count(screen_name, sort=T)
 all_tweets %>% group_by(screen_name) %>% summarise(rt = sum(retweet_count)) %>% arrange(-rt)
 
-MMM_2020 %>% arrange(-favorite_count) %>% select(favorite_count)
+all_tweets %>% arrange(-favorite_count) %>% select(favorite_count)
 
 MMM_2020 %>% group_by(screen_name) %>% count(sort=T)
 
@@ -153,7 +183,6 @@ annotation_custom(rasterGrob(truth_background,
                                  height = unit(1,"npc")), 
                       -Inf, Inf, -Inf, Inf) 
 
-library(grid)
 
 a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + 
   annotation_custom(rasterGrob(truth_background, 
@@ -166,6 +195,7 @@ a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_
 
 all_tweets %>% mutate(day = as_date(created_at)) %>% count(day, sort=T)
 
+all_tweets %>% mutate(day = as_date(created_at)) %>% mutate(weekday = wday(day, label = T)) %>% count(weekday)  %>%  ggplot(aes(weekday,n)) + geom_line(group=1) + labs(title = "When people use the 2020MMM hashtag",subtitle = paste("as of ", current_time))
 
 
 all_tweets %>% distinct(screen_name, .keep_all = TRUE) %>%  count(location, sort=T)
@@ -175,23 +205,34 @@ all_tweets %>% distinct(screen_name, .keep_all = TRUE) %>%  count(location, sort
 wordcloud
 note: if there is a _ not showing up, which exmapling why mammls_suck isn't there
 
-```{r}
+```{r wordcloud}
 MMM_table <- all_tweets %>% unnest_tokens(word, text)
 MMM_table <- MMM_table %>% anti_join(stop_words)
+MMM_table_data <- MMM_table
 MMM_table <- MMM_table %>% count(word, sort =  T)
 MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https"))
-wordcloud2::wordcloud2(MMM_table_edited, size = .4)
+wordcloud2::wordcloud2(MMM_table_edited, size = .3)
 #MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https", "march", "mammal", "madness"))
 
 
-letterCloud(MMM_table_edited, word = "M", size=.4)
+letterCloud(MMM_table_edited, word = "M", size=.2)
+#just top words
+
+top <- MMM_table_edited %>% top_n(50)
+wordcloud2::wordcloud2(top, size = .5)
+letterCloud(top, word = "MMM", size=.15)
 
 filt <- MMM_table_edited %>%  filter(n >10)
 
-figPath <- "/Users/mkissel/Documents/Code/R_projects/2020_MMM/image.png"
+figPath <- "/Users/mkissel/Documents/Code/R_projects/2020_MMM/Picture1.png"
 
 
-wordcloud2(demoFreq, figPath = figPath, size = 3,color = "green", backgroundColor = "black")
+wordcloud2(top, figPath = figPath, size=.5)
+
+#not wordcloud
+
+
+
 ```
 
 
@@ -206,7 +247,7 @@ filter(str_detect(text, "panda")) %>% pull(text)
 #lets see if i can pull out teams? or remove screennames from text
 
 teams <- all_tweets %>% filter(str_detect(text, "team"))
-
+gorilla <- all_tweets %>% filter(str_detect(text, "gorilla"))
 
 
 MMM_table_edited
@@ -217,7 +258,7 @@ map data
 (note that most tweets don't have loc data)
 
 ```{r}
-MMM_2020 %>% count(country_code)
+all_tweets %>% count(country_code)
 rt1 <- lat_lng(all_tweets)
 ```
 
@@ -269,7 +310,7 @@ network?
 #first step is to fix issues. this fixes the mentions_screen_name col. might need for others as well. Also note i loose other cols. might either want to see if i can keep them or subset before if i want to look at different dates?
 
 
-```{r}
+```{r setup  for network analysis}
 tidy_tweets <- all_tweets %>% 
   select(screen_name, mentions_screen_name) %>% 
   mutate(
@@ -299,11 +340,11 @@ tidy_tweets %>%
 
 # below is a way to keep more cols, at least at first...
 
-```{r}
+```{r keeping data data for network}
 
-```{r}
+
 dump_tidy_tweets <- all_tweets %>% 
-  select(screen_name, text, mentions_screen_name) %>% 
+  select(screen_name, text, created_at, mentions_screen_name) %>% 
   tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
   tidyr::nest(mentions_screen_name = c(mentions_screen_name))
 
@@ -316,8 +357,10 @@ dump_tidy_tweets %>%
   gt_edges(screen_name, mentions_screen_name) %>% 
   gt_nodes() %>% 
   gt_collect() -> dump_gt
-```
 
+####below i am saving back as tidy tweets
+tidy_tweets <- dump_tidy_tweets %>% mutate(day = as_date( created_at))
+```
 
 ```
 
@@ -333,7 +376,7 @@ and transivity
 
 
 
-```{r}
+```{r network}
 library(tidygraph)
 library(rtweet)
 library(igraph)
@@ -347,6 +390,8 @@ filter(tidy_tweets) %>%
   unnest(mentions_screen_name) %>% 
   filter(!is.na(mentions_screen_name)) %>% 
   graph_from_data_frame() -> rt_g
+
+
 
 ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
   geom_segment(aes(x, y, xend=x, yend=0), color="slateblue") +
@@ -373,6 +418,8 @@ rt_g %>% ggraph(layout = "fr") +
         ggtitle(expression(paste("Who talks to who in", 
                                  italic("March Mammal Madness")))) +
         theme_void()
+
+
   
 ```
 
@@ -386,6 +433,18 @@ Other network things with igraph
 # see https://www.youtube.com/watch?v=0xsM0MbRPGE
 
 degree(rt_g) #number of connections
+
+as.data.frame(degree(rt_g))
+hist(degree(rt_g), breaks=1:vcount(rt_g)-1, main="Histogram of node degree")
+
+#https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
+
+deg.dist <- degree_distribution(rt_g, cumulative=T, mode="all")
+plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, col="orange",
+xlab="Degree", ylab="Cumulative Frequency")
+
+
+
 degree(rt_g, mode = "in")
 degree(rt_g, mode = "out")
 
@@ -394,18 +453,24 @@ diameter(rt_g)
 ecount(rt_g) #how many edges
 vcount(rt_g)
 edge_density(rt_g, loops = F)
+
+
 reciprocity(rt_g) #in this case, = .15 so 15% reciprocity
+
 #one thing to think about is does this increase over time? i.e. as the game increases do more people follow each other? could sep by days and look at it that way? but to do that i'd have to redo the tidytweets df and make sure to subset correctyl
 
 closeness(rt_g) #also something to look at. who is closest? 
+# closeness centrality is a way of detecting nodes that are able to spread information very efficiently through a grap
 
 betweenness(rt_g) # who is inbetween 
+
 edge_betweenness(rt_g)
 
 
 # we can add things like we did above
 
 V(rt_g)$degree <- degree(rt_g)
+
 hist(V(rt_g)$degree) # amny nodes with few connection
 
 #then use above to look by degree
@@ -419,14 +484,40 @@ rt_g %>% ggraph(layout = "fr") +
         ggtitle(expression(paste("Who talks to who in", 
                                  italic("March Mammal Madness")))) +
         theme_void()
+
 #looking better...just have too many labed i think
+#change what is labled
+
+V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 30, names(V(rt_g)), "")) 
+V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 30, degree(rt_g), 0)) 
+
 
 rt_g %>% ggraph(layout = "fr") +
-        geom_edge_link() +
-        geom_node_point(aes(size = degree)) +
-         ggtitle(expression(paste("Who talks to who in", 
+        geom_edge_link(aes(color="red")) +
+        geom_node_point(aes(size = degree, color="red")) +
+  geom_node_label(aes(label=node_label),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
                                  italic("March Mammal Madness")))) +
-        theme_void()
+        theme_void() + labs(caption = paste("as of", current_time ))
+
+
+
+rt_g %>% ggraph(layout = "kk") +
+        geom_edge_link(aes(color="red")) +
+        geom_node_point(aes(size = degree, color=degree)) +
+  geom_node_label(aes(label=node_label),
+                  label.size=0, fill="#ffffff66", segment.colour="springgreen",
+                  color="slateblue", repel=TRUE, fontface="bold")      +
+        ggtitle(expression(paste("Who talks to who in", 
+                                 italic("March Mammal Madness")))) +
+        theme_void() + labs(caption = paste("as of", current_time ))
+
+
+
+
+
 
 #below try a dif layout
 
@@ -519,7 +610,7 @@ par(mfrow=c(1,2))
 
 #below shld work!!!!!
 
-```{r}
+```{r fancy networks}
 
 tidy_tweets <- all_tweets %>% 
   select(screen_name, mentions_screen_name) %>% 

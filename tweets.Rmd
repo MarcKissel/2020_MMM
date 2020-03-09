@@ -574,7 +574,11 @@ sigmajs() %>%
 
 w <- all_tweets %>% as.list(mentions_screen_name)
 
+```
+
+
 #below shld work!!!!!
+```{r}
 tidy_tweets <- all_tweets %>% 
   select(screen_name, mentions_screen_name) %>% 
   mutate(
@@ -618,9 +622,55 @@ sigmajs() %>%
   sg_force_start() %>% 
   sg_nodes(nodes, id, label, size, color) %>% 
   sg_edges(edges, id, source, target) %>% 
+  sg_force_stop(10000) %>%  sg_drag_nodes() %>% sg_cluster()
+
+
+sigmajs() %>% 
+  sg_force_start() %>% 
+  sg_nodes(nodes, id, label, size, color) %>% 
+  sg_edges(edges, id, source, target) %>% 
   sg_force_stop(10000)
 
-``
+
+#what about comentions?
+
+net <- tidy_tweets %>% 
+  gt_co_edges(mentions_screen_name) %>%
+  gt_nodes() %>% 
+  gt_collect()
+
+c(edges, nodes) %<-% net
+
+
+edges <- edges %>% 
+  mutate(id = 1:n()) 
+
+nodes <- nodes %>% 
+  mutate(
+    id = nodes,
+    label = id,
+    size = n
+  )
+
+sigmajs() %>% 
+  sg_nodes(nodes, id, label, size) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_cluster(
+    colors = c(
+      "#0084b4",
+      "#00aced",
+      "#1dcaff",
+      "#c0deed"
+      )
+  ) %>% 
+  sg_layout(layout = igraph::layout.fruchterman.reingold) %>% 
+  sg_neighbours() %>% 
+  sg_settings(
+    maxNodeSize = 3,
+    defaultEdgeColor = "#a3a3a3",
+    edgeColor = "default"
+  )
+
 
 
 g %>% 
@@ -631,3 +681,114 @@ g %>%
 
 ```
 
+
+
+
+belwo is more on the graphTweets etc
+
+rom:https://twinetbook.john-coene.com/get-started.html
+
+```{r}
+net <- tidy_tweets %>% 
+  gt_edges(source = screen_name, target = mentions_screen_name)
+
+class(net)
+
+#To extracts the results from graphTweets run gt_collect, this will work at any point in the chain of pipes (%>%).
+
+net <- net %>% 
+  gt_collect()
+#Great but this returns a lists and R users much prefer data.frames. graphTweets actualy returns two data.frames that are encapsulated in a list. Indeed networks cannot be compressed into a single data.frame, we need 1) nodes and 2) edges.
+
+names(net)
+
+#reat, so it looks like we have both nodes and edges, not really. We only have edges, net$nodes is actually NULL.
+
+# hindsights, we only ran gt_edges so it make sense to only have edges. Let’s scrap that and get both nodes and edges.
+
+
+net <- all_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% # get edges
+  gt_nodes() %>% # get nodes
+  gt_collect() # collect
+
+lapply(net, class)
+
+#unpack netowrk
+
+
+c(edges, nodes) %<-% net
+
+head(edges)
+
+
+#each edge simply consists of a source and a target. In this network, the source essentially corresponds to screen_name passed in gt_edges, it is the user who posted the tweet. In contrast, target includes the users that were tagged in the text of the tweet. The n variable indicates how many tweets connect the source to the target.
+
+head(nodes)
+
+n the nodes data frame, the column n is the number of times the node appears (whether as source or as target), while the nodes column are the Twitter handles of both the authors of the tweets (screen_name) and those who were @tagged in the tweets. All nodes are of type user in this network, but we will have examples later in the book where it may not be.
+
+
+
+#Below we rename a few columns, to meet sigmajs’ naming convention.
+#We add ids to our nodes, this can be a string and thus simply corresponds to our nodes column.
+#We essentially rename n to size as this is what sigmajs understands.
+#We add ids to our edges as sigmajs requires each edge to have a unique id.
+
+
+nodes$id <- as.factor(nodes$nodes) 
+nodes$size <- nodes$n 
+edges$id <- seq(1, nrow(edges))
+
+#sigmajs has a specific but sensible naming convention as well as basic minimal requirements.
+#Nodes must at least include id, and size.
+#Edges must at least include id, source, and target.
+
+#Actually, the twinetverse comes with helper functions to prepare the nodes and edges built by graphTweets for use in sigmajs (these are the only functions the ’verse provides).
+
+nodes <- nodes2sg(nodes)
+edges <- edges2sg(edges)
+
+#Let’s visualise that, we must initialise every sigmajs graph with the sigmajs function, then we add our nodes with sg_nodes, passing the column names we mentioned previously, id, and size to meet sigmajs’ minimum requirements. In sigmajs, at the exception of the function called sigmajs, all start with sg_
+
+sigmajs() %>% 
+  sg_nodes(nodes, id, size) 
+
+#igmajs actually allows you to build graphs using only nodes or edges, we’ll see why this is useful in a later chapter on temporal graphs. Let’s add the edges. Then again, to meet sigmajs’ requirements, we pass id, source and target.
+
+sigmajs() %>% 
+  sg_nodes(nodes, id, size) %>% 
+  sg_edges(edges, id, source, target)
+
+#Nevermind beauty, what’s on the graph exactly? Each disk/point on the graph is a twitter user, they are connected when one has tagged the other in the a tweet.
+
+#You may also notice that the graph contains surprisingly few nodes, given that we queried 100 tweets you would expect over 100 nodes on the graph. This is because our visualisation only includes tweets that mention other users and most tweets are not targeted (tagged) at other users. There is an easy remedy to this which we’ll look at in the next section.
+
+#compare to
+
+sigmajs("webgl") %>% 
+  sg_nodes(nodes, id, size) %>% 
+  sg_edges(edges, id, source, target) %>% 
+  sg_layout(layout = igraph::layout_components) %>% 
+  sg_cluster(
+    colors = c(
+      "#0075a0",
+      "#0084b4",
+      "#00aced",
+      "#1dcaff",
+      "#c0deed"
+      )
+  ) %>% 
+  sg_settings(
+    minNodeSize = 1,
+    maxNodeSize = 2.5,
+    edgeColor = "default",
+    defaultEdgeColor = "#d3d3d3"
+  )
+
+```
+
+
+
+to think about.
+1. could look at , linking users to the users they retweet to fundamentally visualise how information spreads throughout Twitter.

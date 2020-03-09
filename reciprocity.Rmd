@@ -1,0 +1,88 @@
+---
+title: "Untitled"
+author: "Marc Kissel"
+date: "3/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## reciprocity
+
+Links:
+https://arxiv.org/abs/1111.5534 "he study of human interactions is of central importance for understanding the behavior of individuals, groups and societies. Here, we observe the formation and evolution of networks by monitoring the addition of all new links and we analyze quantitatively the tendencies used to create ties in these evolving online affiliation networks. We first show that an accurate estimation of these probabilistic tendencies can only be achieved by following the time evolution of the network. For example, actions that are attributed to the usual friend of a friend mechanism through a static snapshot of the network are overestimated by a factor of two. A detailed analysis of the dynamic network evolution shows that half of those triangles were generated through other mechanisms, in spite of the characteristic static pattern. We start by characterizing every single link when the tie was established in the network. This allows us to describe the probabilistic tendencies of tie formation and extract sociological conclusions as follows. The tendencies to add new links differ significantly from what we would expect if they were not affected by the individuals' structural position in the network, i.e., from random link formation. We also find significant differences in behavioral traits among individuals according to their degree of activity, gender, age, popularity and other attributes. For instance, in the particular datasets analyzed here, we find that women reciprocate connections three times as much as men and this difference increases with age. Men tend to connect with the most popular people more often than women across all ages. On the other hand, triangular ties tendencies are similar and independent of gender. Our findings can be useful to build models of realistic social network structures and discover the underlying laws that govern establishment of ties in evolving social networks."
+
+https://www.cs.cornell.edu/home/kleinber/socialcom11-recip.pdf "In social media settings where users send messages
+to one another, the issue of reciprocity naturally arises: does
+the communication between two users take place only in one
+direction, or is it reciprocated? In this paper we study the
+problem of reciprocity prediction: given the characteristics of
+two users, we wish to determine whether the communication
+between them is reciprocated or not. We approach this problem
+using decision trees and regression models to determine good
+indicators of reciprocity. We extract a network based on directed
+@-messages sent between users on Twitter, and identify measures
+based on the attributes of nodes and their network neighborhoods
+that can be used to construct good predictors of reciprocity.
+Moreover, we find that reciprocity prediction forms interesting
+contrasts with earlier network prediction tasks, including link
+prediction, as well as the inference of strengths and signs of
+network links."
+
+
+
+#testing with my data
+```{r}
+
+tidy_tweets
+
+dump_tidy_tweets <- all_tweets %>% 
+  select(screen_name, text, created_at, mentions_screen_name) %>% 
+  tidyr::separate_rows(mentions_screen_name, sep = " ") %>% 
+  tidyr::nest(mentions_screen_name = c(mentions_screen_name))
+
+dump_tidy_tweets$mentions_screen_name <- dump_tidy_tweets$mentions_screen_name %>%  
+  purrr::map(unlist) %>% 
+  purrr::map(unname)
+
+#below i am droppng the text. i wonder if way to keep it as attibutr? that would be totes long though
+dump_tidy_tweets %>% 
+  gt_edges(screen_name, mentions_screen_name) %>% 
+  gt_nodes() %>% 
+  gt_collect() -> dump_gt
+
+####below i am saving back as tidy tweets
+tidy_tweets <- dump_tidy_tweets %>% mutate(day = as_date( created_at))
+
+#divide into two groups?
+
+Feb <- tidy_tweets %>% filter(day <= "2020-02-29")
+
+March <- tidy_tweets %>% filter(day > "2020-02-29") 
+
+
+filter(Feb) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_feb
+
+
+
+filter(March) %>% 
+  select(screen_name, mentions_screen_name) %>%
+  unnest(mentions_screen_name) %>% 
+  filter(!is.na(mentions_screen_name)) %>% 
+  graph_from_data_frame() -> rt_mar
+
+
+reciprocity(rt_feb)
+reciprocity(rt_mar)
+
+#it increased!
+#what if we did by week and then had a dataframe with this to show change over time. 
+#other thinsgs to look at will be avg closness etc? 
+```
+
