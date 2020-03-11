@@ -73,8 +73,14 @@ MMM_2020_March08_12_10_am<- search_tweets(
 MMM_2020_March09_9_30_am<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
+MMM_2020_March10_10_20_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
 current_time <- Sys.time()
 
+
+MMM_2020_March10_9_50_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
 
 ```
 
@@ -93,16 +99,17 @@ write_as_csv(MMM_2020_March04_11_30_am,"2020-03-04_11_30am_tweets" )
 write_as_csv(MMM_2020_March04_8_45_pm,"2020-03-04_8_45pm_tweets" )
 write_as_csv(MMM_2020_March05_6_10_pm, "2020-03-05_6_10pm_tweets")
 write_as_csv(MMM_2020_March06_1_30_pm, "2020-03-06_1_30pm_tweets")
-
 write_as_csv(MMM_2020_March08_12_10_am, "2020-03-08_12_10am_tweets" )
-
 write_as_csv(MMM_2020_March09_9_30_am, "2020-03-09_9_30am_tweets" )
+write_as_csv(MMM_2020_March10_10_20_am, "2020-03-10_10_20am_tweets")
+write_as_csv(MMM_2020_March10_9_50_pm, "2020-03-10_9_30pm_tweets")
 
 
 ```
 
 Testing adding dfs together
 ```{r adding data together}
+
 first <- read_csv("2020-03-01_9AM_tweets.csv")
 second <- read_csv("2020-03-01_5_50pm_tweets.csv")
 third <- read_csv("2020-03-02_6_30am_tweets.csv")
@@ -114,8 +121,10 @@ eighth <- read_csv("2020-03-05_6_10pm_tweets.csv")
 ninth <- read_csv("2020-03-06_1_30pm_tweets.csv")
 tenth <- read_csv("2020-03-08_12_10am_tweets.csv")
 eleven <- read_csv("2020-03-09_9_30am_tweets.csv")
+tweleve <- read_csv("2020-03-10_10_20am_tweets.csv")
+thirteen <- read_csv("2020-03-10_9_30pm_tweets.csv") 
 
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleven) %>% distinct(text, .keep_all = TRUE)
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleven, tweleve, thirteen) %>% distinct(text, .keep_all = TRUE)
 
 #total <- rbind(a,b)
 #totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
@@ -400,6 +409,7 @@ ggplot(data_frame(y=degree_distribution(rt_g), x=1:length(y))) +
   theme_ipsum_rc(grid="Y", axis="x")
 
 
+
 #add labels for nodes that have a degree of 5 or more . if there is lower than 5 there is no label
 V(rt_g)$node_label <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, names(V(rt_g)), "")) 
 V(rt_g)$node_size <- unname(ifelse(degree(rt_g)[V(rt_g)] > 5, degree(rt_g), 0)) 
@@ -437,9 +447,16 @@ degree(rt_g) #number of connections
 as.data.frame(degree(rt_g))
 hist(degree(rt_g), breaks=1:vcount(rt_g)-1, main="Histogram of node degree")
 
+
+#can i do a log
+
+
+hist(log(degree(rt_g)), breaks=1:vcount(rt_g)-1, main="Histogram of node degree")
+
 #https://kateto.net/wp-content/uploads/2016/01/NetSciX_2016_Workshop.pdf
 
 deg.dist <- degree_distribution(rt_g, cumulative=T, mode="all")
+
 plot( x=0:max(deg), y=1-deg.dist, pch=19, cex=1.2, col="orange",
 xlab="Degree", ylab="Cumulative Frequency")
 
@@ -454,6 +471,7 @@ ecount(rt_g) #how many edges
 vcount(rt_g)
 edge_density(rt_g, loops = F)
 
+#note that the bigger a network geets the smmaller the density
 
 reciprocity(rt_g) #in this case, = .15 so 15% reciprocity
 
