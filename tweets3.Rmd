@@ -82,6 +82,12 @@ current_time <- Sys.time()
 MMM_2020_March10_9_50_pm<- search_tweets(
   "#2020MMM", n = 18000, include_rts = FALSE)
 
+MMM_2020_March11_11_00_pm<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
+MMM_2020_March12_7_22_am<- search_tweets(
+  "#2020MMM", n = 18000, include_rts = FALSE)
+
 ```
 
 now i loose the first 29 from set1 and
@@ -103,8 +109,10 @@ write_as_csv(MMM_2020_March08_12_10_am, "2020-03-08_12_10am_tweets" )
 write_as_csv(MMM_2020_March09_9_30_am, "2020-03-09_9_30am_tweets" )
 write_as_csv(MMM_2020_March10_10_20_am, "2020-03-10_10_20am_tweets")
 write_as_csv(MMM_2020_March10_9_50_pm, "2020-03-10_9_30pm_tweets")
+write_as_csv(MMM_2020_March11_11_00_pm,"2020-03-11_11_00pm_tweets")
+write_as_csv(MMM_2020_March12_7_22_am,"2020-03-12_7_2am_tweets")
 
-
+MMM_2020_March12_7_22_am
 ```
 
 Testing adding dfs together
@@ -123,8 +131,12 @@ tenth <- read_csv("2020-03-08_12_10am_tweets.csv")
 eleven <- read_csv("2020-03-09_9_30am_tweets.csv")
 tweleve <- read_csv("2020-03-10_10_20am_tweets.csv")
 thirteen <- read_csv("2020-03-10_9_30pm_tweets.csv") 
-
-all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleven, tweleve, thirteen) %>% distinct(text, .keep_all = TRUE)
+fourteen <- read_csv("2020-03-11_11_00pm_tweets.csv")
+fifteen <- read_csv("2020-03-12_7_2am_tweets.csv")  #comare to the rest
+  
+  
+  
+all_tweets <- rbind(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleven, tweleve, thirteen,fourteen) %>% distinct(text, .keep_all = TRUE)
 
 #total <- rbind(a,b)
 #totalgrouped <- total %>%  distinct(text, .keep_all = TRUE)
@@ -182,8 +194,7 @@ MMM_2020 %>% group_by(screen_name) %>% filter(n() > 5) %>%  ggplot(aes(x= screen
 
 a <- all_tweets %>% group_by(screen_name) %>% add_tally() %>%   filter(n() > 5) %>% ungroup()
 
-a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name") + theme(legend.position = "none")
-
+a %>% mutate(screen_name = fct_reorder(screen_name,n)) %>% ggplot(aes(x= screen_name, fill=screen_name)) + geom_bar() + coord_flip() + labs(title = "number of tweets that mention #2020MMM", subtitle = paste("as of", current_time ), x= "screen name") + theme(legend.position = "none") 
 
 truth_background <- png::readPNG("LoveMMM.png")
 
@@ -220,7 +231,7 @@ MMM_table <- MMM_table %>% anti_join(stop_words)
 MMM_table_data <- MMM_table
 MMM_table <- MMM_table %>% count(word, sort =  T)
 MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https"))
-wordcloud2::wordcloud2(MMM_table_edited, size = .3)
+wordcloud2::wordcloud2(MMM_table_edited, size = .4)
 #MMM_table_edited <- MMM_table %>% filter(!word %in% c("2020mmm", "t.co", "https", "march", "mammal", "madness"))
 
 
